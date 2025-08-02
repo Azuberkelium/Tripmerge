@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triple Fall</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <h1>Triple Fall</h1>
+        <div id="game-board"></div>
+        <div class="score-container">
+            Score: <span id="score">0</span>
+        </div>
+        <div id="game-over" class="hidden">
+            <h2>Game Over</h2>
+            <button onclick="window.location.reload()">Play Again</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
