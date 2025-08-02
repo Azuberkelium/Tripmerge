@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
             randomTile.value = 3;
             updateBoard();
         } else {
-            // No empty tiles in the top row, which could lead to a game over
             checkForGameOver();
         }
     }
@@ -54,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function checkForGameOver() {
-        // Check if there are any empty tiles
+        // Check for any empty tiles
         for (let i = 0; i < boardSize; i++) {
             for (let j = 0; j < boardSize; j++) {
                 if (board[i][j].value === 0) return;
@@ -62,46 +61,88 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Check for possible moves
-        // (This is a simplified check, a more robust one would check all directions)
         for (let i = 0; i < boardSize; i++) {
             for (let j = 0; j < boardSize - 1; j++) {
-                if (board[i][j].value === board[i][j+1].value && board[i][j].value !== 0) return;
+                if (board[i][j].value === board[i][j + 1].value) return;
             }
         }
-        
-        for (let i = 0; i < boardSize - 1; i++) {
-            for (let j = 0; j < boardSize; j++) {
-                if (board[i][j].value === board[i+1][j].value && board[i][j].value !== 0) return;
+        for (let j = 0; j < boardSize; j++) {
+            for (let i = 0; i < boardSize - 1; i++) {
+                if (board[i][j].value === board[i + 1][j].value) return;
             }
         }
 
         gameOverDisplay.classList.remove('hidden');
     }
 
-    function moveTiles(direction) {
+    function filterZeros(line) {
+        return line.filter(val => val !== 0);
+    }
+
+    function mergeLine(line) {
+        let filteredLine = filterZeros(line);
+        let mergedLine = Array(boardSize).fill(0);
+        let merged = false;
+
+        for (let i = 0; i < filteredLine.length; i++) {
+            if (i < filteredLine.length - 2 &&
+                filteredLine[i] === filteredLine[i + 1] &&
+                filteredLine[i] === filteredLine[i + 2]) {
+                const newValue = filteredLine[i] * 3;
+                score += newValue;
+                mergedLine[mergedLine.indexOf(0)] = newValue;
+                i += 2;
+                merged = true;
+            } else {
+                mergedLine[mergedLine.indexOf(0)] = filteredLine[i];
+            }
+        }
+        return { mergedLine: mergedLine, merged: merged };
+    }
+
+    function move(direction) {
         let moved = false;
-        if (direction === 'down') {
-            for (let j = 0; j < boardSize; j++) {
-                let column = [];
-                for (let i = 0; i < boardSize; i++) {
-                    if (board[i][j].value !== 0) column.push(board[i][j].value);
+        let newBoard = Array(boardSize).fill(null).map(() => Array(boardSize).fill(0));
+        
+        for (let i = 0; i < boardSize; i++) {
+            let line = [];
+            if (direction === 'up' || direction === 'down') {
+                for (let j = 0; j < boardSize; j++) {
+                    line.push(board[j][i].value);
                 }
+            } else { // 'left' or 'right'
+                for (let j = 0; j < boardSize; j++) {
+                    line.push(board[i][j].value);
+                }
+            }
 
-                column = mergeColumn(column);
+            if (direction === 'down' || direction === 'right') {
+                line.reverse();
+            }
 
-                for (let i = 0; i < boardSize; i++) {
-                    let newValue = column[i] || 0;
-                    if (board[i][j].value !== newValue) {
-                        board[i][j].value = newValue;
+            const { mergedLine, merged } = mergeLine(line);
+
+            if (direction === 'down' || direction === 'right') {
+                mergedLine.reverse();
+            }
+            
+            if (direction === 'up' || direction === 'down') {
+                for (let j = 0; j < boardSize; j++) {
+                    if (board[j][i].value !== mergedLine[j]) {
+                        board[j][i].value = mergedLine[j];
+                        moved = true;
+                    }
+                }
+            } else { // 'left' or 'right'
+                for (let j = 0; j < boardSize; j++) {
+                    if (board[i][j].value !== mergedLine[j]) {
+                        board[i][j].value = mergedLine[j];
                         moved = true;
                     }
                 }
             }
         }
-        // You'd need to add logic for 'up', 'left', 'right' directions here.
-        // For simplicity, this example only handles 'down'.
-        // The logic for other directions would be similar, but with different loops and array manipulation.
-
+        
         if (moved) {
             spawnTile();
         }
@@ -109,48 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
         checkForGameOver();
     }
 
-    function mergeColumn(column) {
-        const newColumn = Array(boardSize).fill(0);
-        let k = boardSize - 1;
-
-        for (let i = column.length - 1; i >= 0; i--) {
-            newColumn[k--] = column[i];
-        }
-
-        for (let i = boardSize - 1; i >= 2; i--) {
-            if (newColumn[i] === newColumn[i-1] && newColumn[i] === newColumn[i-2] && newColumn[i] !== 0) {
-                const newValue = newColumn[i] * 3;
-                score += newValue;
-                newColumn[i] = newValue;
-                newColumn[i-1] = 0;
-                newColumn[i-2] = 0;
-            }
-        }
-
-        // Re-pack the column after merging
-        const filteredColumn = newColumn.filter(val => val !== 0);
-        const packedColumn = Array(boardSize - filteredColumn.length).fill(0).concat(filteredColumn);
-        return packedColumn;
-    }
-
     document.addEventListener('keydown', (e) => {
-        switch (e.key) {
-            case 'ArrowDown':
-                moveTiles('down');
-                break;
-            // Add cases for other arrow keys here
-            // case 'ArrowUp':
-            //     moveTiles('up');
-            //     break;
-            // case 'ArrowLeft':
-            //     moveTiles('left');
-            //     break;
-            // case 'ArrowRight':
-            //     moveTiles('right');
-            //     break;
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault(); // Prevents page scrolling
+            move(e.key.replace('Arrow', '').toLowerCase());
         }
     });
-    
+
     // Initialize the game
     createBoard();
     spawnTile();
